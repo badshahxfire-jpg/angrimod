@@ -98,7 +98,7 @@ app.post('/admin/wallet/add', adminAuth, (req, res) => {
 
 // POST /admin/generate — Buy & Generate Key
 app.post('/admin/generate', adminAuth, (req, res) => {
-  const { user, days } = req.body;
+  const { user, days, customKey } = req.body;
   if (!user || days === undefined) return res.status(400).json({ status: 'error', message: 'User and days required' });
 
   // Calculate Price
@@ -109,11 +109,20 @@ app.post('/admin/generate', adminAuth, (req, res) => {
     return res.status(400).json({ status: 'error', message: `Insufficient Wallet Balance! Required ₹${price}, Available ₹${walletBalance}` });
   }
 
+  let key;
+  if (customKey && customKey.trim().length > 0) {
+    key = customKey.trim().toUpperCase();
+    if (keys[key]) {
+      return res.status(400).json({ status: 'error', message: `Key '${key}' already exists! Choose another name.` });
+    }
+  } else {
+    key = generateKey();
+  }
+
   // Deduct Balance & Save Wallet
   walletBalance -= price;
   saveJSON(WALLET_FILE, { balance: walletBalance });
 
-  const key = generateKey();
   const expiresAt = days === -1 ? -1 : Date.now() + (days || 1) * 24 * 60 * 60 * 1000;
 
   keys[key] = {
